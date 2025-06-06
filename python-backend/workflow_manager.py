@@ -6,6 +6,7 @@ from typing import List, Dict, Optional
 
 # Assuming workflow_models.py is in the same directory or accessible in PYTHONPATH
 from .workflow_models import Workflow, TargetConnectorType, BrowserActionType, GmailActionType, Trigger, BaseAction
+from . import scheduler # Import the scheduler module
 
 # Setup basic logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -18,6 +19,18 @@ class WorkflowManager:
         self.workflow_file_path = workflow_file_path
         self.workflows: Dict[str, Workflow] = {}
         self._load_workflows()
+        self._initialize_scheduler_jobs() # Schedule jobs for loaded workflows
+
+    def _initialize_scheduler_jobs(self) -> None:
+        """Schedules all enabled cron workflows loaded from the file."""
+        logger.info("Initializing scheduler jobs for loaded workflows...")
+        count = 0
+        for workflow in self.workflows.values():
+            if workflow.is_enabled and workflow.trigger.trigger_type == "cron":
+                scheduler.add_or_update_job(workflow)
+                count += 1
+        logger.info(f"Initialized {count} cron jobs from loaded workflows.")
+
 
     def _load_workflows(self) -> None:
         if not os.path.exists(self.workflow_file_path):
@@ -72,7 +85,9 @@ class WorkflowManager:
 
             self.workflows[workflow.id] = workflow
             self._save_workflows()
-            logger.info(f"Added workflow '{workflow.name}' with ID '{workflow.id}'.")
+            # After successfully adding and saving, update the scheduler
+            scheduler.add_or_update_job(workflow)
+            logger.info(f"Added workflow '{workflow.name}' with ID '{workflow.id}' and updated scheduler.")
             return workflow
         except Exception as e: # Pydantic's ValidationError
             logger.error(f"Error validating workflow data for add: {e}. Data: {workflow_data}")
@@ -106,7 +121,9 @@ class WorkflowManager:
             updated_workflow = Workflow.model_validate(updated_data)
             self.workflows[workflow_id] = updated_workflow
             self._save_workflows()
-            logger.info(f"Updated workflow '{updated_workflow.name}' with ID '{workflow_id}'.")
+            # After successfully updating and saving, update the scheduler
+            scheduler.add_or_update_job(updated_workflow)
+            logger.info(f"Updated workflow '{updated_workflow.name}' with ID '{workflow_id}' and updated scheduler.")
             return updated_workflow
         except Exception as e: # Pydantic's ValidationError
             logger.error(f"Error validating workflow data for update (ID: {workflow_id}): {e}. Update Data: {workflow_update_data}")
@@ -117,7 +134,9 @@ class WorkflowManager:
             deleted_workflow_name = self.workflows[workflow_id].name
             del self.workflows[workflow_id]
             self._save_workflows()
-            logger.info(f"Deleted workflow '{deleted_workflow_name}' with ID '{workflow_id}'.")
+            # After successfully deleting from store, remove from scheduler
+            scheduler.remove_job(workflow_id)
+            logger.info(f"Deleted workflow '{deleted_workflow_name}' with ID '{workflow_id}' and removed from scheduler.")
             return True
         logger.warning(f"Workflow with ID '{workflow_id}' not found. Cannot delete.")
         return False
@@ -127,12 +146,18 @@ if __name__ == '__main__':
     # Use a test-specific workflow file to avoid interfering with a real one
     TEST_WORKFLOW_FILE = 'python-backend/test_workflows.json'
 
+    # Ensure scheduler is gracefully shutdown for tests, especially if they re-initialize it.
+    # For simplicity in this test block, we'll rely on the main app's shutdown.
+    # If this test were run completely standalone, we'd manage scheduler shutdown here.
+
     # Clean up old test file if it exists
     if os.path.exists(TEST_WORKFLOW_FILE):
         os.remove(TEST_WORKFLOW_FILE)
         print(f"Removed old '{TEST_WORKFLOW_FILE}'.")
 
     manager = WorkflowManager(workflow_file_path=TEST_WORKFLOW_FILE)
+    # Note: The scheduler is started when scheduler.py is imported.
+    # And manager.__init__ calls _initialize_scheduler_jobs.
 
     # 1. Add a workflow
     print("\n1. Adding a new workflow...")
@@ -242,3 +267,10 @@ if __name__ == '__main__':
     # if os.path.exists(TEST_WORKFLOW_FILE):
     #     os.remove(TEST_WORKFLOW_FILE)
     #     print(f"Cleaned up '{TEST_WORKFLOW_FILE}'.")
+
+    # It's important to shut down the global scheduler if these tests are run multiple times
+    # or if the main application also uses it. For this __main__ block, we assume it's the
+    # primary user or the main app isn't running simultaneously with these tests.
+    # In a real test suite, scheduler management would be more careful.
+    print("\n--- Test complete. Shutting down scheduler for this test run. ---")
+    scheduler.shutdown_scheduler(wait=False) # Use wait=False for quick exit in tests
