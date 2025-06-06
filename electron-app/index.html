@@ -2,18 +2,96 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>Electron-Python Bridge</title>
+    <title>Electron-Python Chat</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+      h1 { text-align: center; margin-top: 10px; margin-bottom: 10px; }
+      #chatOutput {
+        flex-grow: 1;
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin: 10px;
+        overflow-y: auto;
+        height: 70vh; /* fallback or primary height control */
+        display: flex;
+        flex-direction: column-reverse; /* Newest messages at the bottom, and auto-scroll works better */
+      }
+      .message {
+        margin-bottom: 8px;
+        padding: 8px;
+        border-radius: 5px;
+        max-width: 80%;
+      }
+      .user-message {
+        background-color: #dcf8c6;
+        align-self: flex-end;
+        text-align: right;
+      }
+      .python-message {
+        background-color: #f1f0f0;
+        align-self: flex-start;
+        text-align: left;
+      }
+      #chatInputArea {
+        display: flex;
+        padding: 10px;
+        border-top: 1px solid #ccc;
+      }
+      #messageInput {
+        flex-grow: 1;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        margin-right: 10px;
+      }
+      #sendMessageButton {
+        padding: 10px 15px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      #sendMessageButton:hover {
+        background-color: #0056b3;
+      }
+      #workflowsTools {
+        padding: 10px;
+        text-align: center;
+      }
+      #workflowsDisplayArea {
+        height: 200px;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        margin: 10px;
+        padding: 10px;
+        background-color: #f9f9f9;
+      }
+      #workflowsDisplayArea pre {
+        margin: 0;
+        font-size: 0.9em;
+      }
+    </style>
   </head>
   <body>
-    <h1>Electron-Python Communication</h1>
+    <h1>Electron-Python Chat & Workflow Manager</h1>
 
-    <div>
-      <input type="text" id="messageInput" placeholder="Type message for Python...">
-      <button id="sendMessageButton">Send to Python</button>
+    <div id="chatOutput">
+      <!-- Messages will be appended here by renderer.js -->
     </div>
 
-    <h2>Response from Python:</h2>
-    <div id="pythonResponse" style="white-space: pre-wrap; border: 1px solid #ccc; min-height: 50px; padding: 10px;"></div>
+    <div id="chatInputArea">
+      <input type="text" id="messageInput" placeholder="Type command (e.g., list emails, list workflows, navigate to ...)">
+      <button id="sendMessageButton">Send</button>
+    </div>
+
+    <div id="workflowsTools">
+      <button id="viewWorkflowsButton">View Workflows</button>
+    </div>
+
+    <div id="workflowsDisplayArea">
+      <!-- Workflow list will be displayed here -->
+    </div>
 
     <script src="renderer.js" defer></script>
   </body>
