@@ -2,18 +2,165 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>Electron-Python Bridge</title>
+    <title>Electron-Python Chat</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+      h1 { text-align: center; margin-top: 10px; margin-bottom: 10px; }
+      #chatOutput {
+        flex-grow: 1;
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin: 10px;
+        overflow-y: auto;
+        height: 70vh; /* fallback or primary height control */
+        display: flex;
+        flex-direction: column-reverse; /* Newest messages at the bottom, and auto-scroll works better */
+      }
+      .message {
+        margin-bottom: 8px;
+        padding: 8px;
+        border-radius: 5px;
+        max-width: 80%;
+      }
+      .user-message {
+        background-color: #dcf8c6;
+        align-self: flex-end;
+        text-align: right;
+      }
+      .python-message {
+        background-color: #f1f0f0;
+        align-self: flex-start;
+        text-align: left;
+      }
+      #chatInputArea {
+        display: flex;
+        padding: 10px;
+        border-top: 1px solid #ccc;
+      }
+      #messageInput {
+        flex-grow: 1;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        margin-right: 10px;
+      }
+      #sendMessageButton {
+        padding: 10px 15px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      #sendMessageButton:hover {
+        background-color: #0056b3;
+      }
+      #workflowsTools {
+        padding: 10px;
+        text-align: center;
+      }
+      #workflowsDisplayArea {
+        height: 200px;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        margin: 10px;
+        padding: 10px;
+        background-color: #f9f9f9;
+      }
+      #workflowsDisplayArea pre {
+        margin: 0;
+        font-size: 0.9em;
+      }
+      #workflowCreationArea {
+        padding: 10px;
+        margin: 10px;
+        border: 1px solid #007bff;
+        border-radius: 5px;
+      }
+      #workflowCreationArea h3 {
+        margin-top: 0;
+        color: #007bff;
+      }
+      #workflowCreationArea label, #workflowCreationArea input, #workflowCreationArea select, #workflowCreationArea button {
+        display: block;
+        margin-bottom: 8px;
+        width: calc(100% - 16px); /* Account for padding/border */
+      }
+      #workflowCreationArea input[type="text"], #workflowCreationArea input[type="number"], #workflowCreationArea select {
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      #workflowCreationArea button {
+        padding: 10px 15px;
+        background-color: #28a745; /* Green for save */
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        width: auto; /* Let buttons size to content or set specific width */
+        margin-right: 5px; /* Space between buttons */
+      }
+      #workflowCreationArea button#clearWorkflowFormButton {
+        background-color: #ffc107; /* Yellow for clear */
+      }
+      #workflowActionParamsDiv input { /* Style dynamically added param inputs */
+         margin-left: 20px; /* Indent param inputs */
+         width: calc(100% - 36px); /* Adjust width for indent */
+      }
+       #workflowActionParamsDiv label { /* Style dynamically added param labels */
+         margin-left: 20px;
+         font-size: 0.9em;
+         font-style: italic;
+      }
+    </style>
   </head>
   <body>
-    <h1>Electron-Python Communication</h1>
+    <h1>Electron-Python Chat & Workflow Manager</h1>
 
-    <div>
-      <input type="text" id="messageInput" placeholder="Type message for Python...">
-      <button id="sendMessageButton">Send to Python</button>
+    <div id="chatOutput">
+      <!-- Messages will be appended here by renderer.js -->
     </div>
 
-    <h2>Response from Python:</h2>
-    <div id="pythonResponse" style="white-space: pre-wrap; border: 1px solid #ccc; min-height: 50px; padding: 10px;"></div>
+    <div id="chatInputArea">
+      <input type="text" id="messageInput" placeholder="Type command (e.g., list emails, list workflows, navigate to ...)">
+      <button id="sendMessageButton">Send</button>
+    </div>
+
+    <div id="workflowsTools">
+      <button id="viewWorkflowsButton">View Workflows</button>
+      <button id="openSettingsButton" style="background-color: #17a2b8; margin-left: 10px;">Settings</button>
+      <button id="openWriteAssistBtn" style="background-color: #fd7e14; margin-left: 10px;">Write Assist</button>
+    </div>
+
+    <div id="workflowsDisplayArea">
+      <!-- Workflow list will be displayed here -->
+    </div>
+
+    <div id="workflowCreationArea">
+      <h3>Create/Edit Workflow</h3>
+      <input type="hidden" id="workflowIdInput">
+
+      <label for="workflowNameInput">Name:</label>
+      <input type="text" id="workflowNameInput">
+
+      <label for="workflowCronInput">Cron Expression (e.g., * * * * * for every minute):</label>
+      <input type="text" id="workflowCronInput" placeholder="* * * * *">
+
+      <label for="workflowTargetConnectorSelect">Target Connector:</label>
+      <select id="workflowTargetConnectorSelect"></select>
+
+      <label for="workflowActionTypeSelect">Action Type:</label>
+      <select id="workflowActionTypeSelect"></select>
+
+      <label>Action Parameters:</label>
+      <div id="workflowActionParamsDiv">
+        <!-- Dynamic parameters will be injected here by renderer.js -->
+      </div>
+
+      <button id="saveWorkflowButton">Save Workflow</button>
+      <button id="clearWorkflowFormButton">Clear Form</button>
+    </div>
 
     <script src="renderer.js" defer></script>
   </body>
